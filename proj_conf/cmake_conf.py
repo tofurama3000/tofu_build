@@ -28,6 +28,14 @@ set(CMAKE_CXX_FLAGS "{{#other_flags}}{{.}} {{val}}{{/other_flags}}")
 set(CMAKE_CXX_FLAGS "-std=c++{{flags.cxx_ver}} ${CMAKE_CXX_FLAGS}")
 add_executable({{name}} ${SOURCE_FILES})
 
+{{#includes}}
+include_directories({{.}})
+{{/includes}}
+
+{{#static_libs}}
+target_link_libraries({{app}} {{link}})
+{{/static_libs}}
+
 {{#dyn_libs}}
 {{#find}}
 find_package({{name}} REQUIRED)
@@ -46,6 +54,15 @@ set(CMAKE_CXX_FLAGS "{{#other_flags}}{{.}} {{val}}{{/other_flags}}")
 set(CMAKE_CXX_FLAGS "-std=c++{{flags.cxx_ver}} ${CMAKE_CXX_FLAGS}")
 add_executable(test_{{name}} ${SOURCE_FILES})
 add_test({{name}} bin/test_{{name}})
+
+
+{{#includes}}
+include_directories({{.}})
+{{/includes}}
+
+{{#static_libs}}
+target_link_libraries({{app}} {{link}})
+{{/static_libs}}
 
 {{#dyn_libs}}
 {{#find}}
@@ -88,6 +105,15 @@ def make(yaml):
                             else:
                                 new_lib['include'] = "${" + new_lib['cap'] + "_INCLUDE_DIRS}"
                             lib_types['find'][i] = new_lib
+                if 'static_libs' in app and 'link' in app['static_libs']:
+                    links = app['static_libs']['link']
+                    for index in range(len(links)):
+                        new_lib = {
+                            'name': links[index],
+                            'app': app_name
+                        }
+                        links[index] = new_lib
+
         out_file.write(
             pystache.render(
                 __cmake_template(),

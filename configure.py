@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import yaml as YAML
 import proj_conf
 import os

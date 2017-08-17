@@ -108,3 +108,4 @@ CMakeLists.txt
 Dockerfile_*
 prod_tests.sh
 
+.idea/*
