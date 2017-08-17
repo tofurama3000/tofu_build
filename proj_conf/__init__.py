@@ -1,0 +1,1 @@
+from project_config import make_proj_config as config_proj

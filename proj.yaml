@@ -1,0 +1,33 @@
+project:
+  name: hello_world
+  main: hello_world
+environment:
+  pckgs:
+    - google-mock
+    - libgtest-dev
+  cmds:
+    - cd /usr/src/gtest ; cmake . ; make
+    - mv /usr/src/gtest/*.a /usr/lib/
+    - cd /usr/src/gmock ; cmake . ; make
+    - mv /usr/src/gmock/*.a /usr/lib/
+apps:
+  - name: hello_world
+    type: cpp
+    sources:
+      - main.cpp
+    dyn_libs:
+      find:
+        - name: GTest
+          link: "${GTEST_BOTH_LIBRARIES}"
+    other_flags:
+      - "-pthread"
+tests:
+  - name: hello_world
+    sources:
+      - main.cpp
+    dyn_libs:
+      find:
+        - name: GTest
+          link: "${GTEST_BOTH_LIBRARIES}"
+    other_flags:
+      - "-pthread"
