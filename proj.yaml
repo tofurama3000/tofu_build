@@ -1,3 +1,4 @@
+type: tofu_build
 project:
   name: hello_world
   main: hello_world

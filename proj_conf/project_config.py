@@ -208,7 +208,7 @@ def __append_dict(orig, new):
             orig[k] = new[k]
 
 
-def make_proj_config(yaml):
+def make_proj_config(yaml, options={}):
     if 'apps' not in yaml:
         raise Exception("No apps provided!")
     if 'tests' not in yaml:
@@ -233,5 +233,8 @@ def make_proj_config(yaml):
     yaml['environment']['timestamp'] = datetime.datetime.now().isoformat()
 
     docker_conf.make(yaml)
-    bash_conf.make(yaml)
+    if 'legacy' in options:
+        bash_conf.make_legacy(yaml)
+    else:
+        bash_conf.make(yaml)
     cmake_conf.make(yaml)

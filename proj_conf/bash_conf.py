@@ -138,12 +138,18 @@ exit $RES
 """
 
 
-def make(yaml):
+def make_legacy(yaml):
     with open("prod_tests.sh", "w") as out_file:
         out_file.write(pystache.render(__prod_test_template(), yaml))
     with open("build.sh", "w") as out_file:
         out_file.write(pystache.render(__build_dev_template(), yaml))
     with open("build_prod.sh", "w") as out_file:
         out_file.write(pystache.render(__build_prod_template(), yaml))
+    with open("cmake.sh", "w") as out_file:
+        out_file.write(pystache.render(__cmake_template(), yaml))
+
+def make(yaml):
+    with open("prod_tests.sh", "w") as out_file:
+        out_file.write(pystache.render(__prod_test_template(), yaml))
     with open("cmake.sh", "w") as out_file:
         out_file.write(pystache.render(__cmake_template(), yaml))
