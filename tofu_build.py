@@ -261,8 +261,42 @@ def build(production, verbose):
     click.echo()
 
 
+def print_info(info, tabs=0):
+    def prnt(statement):
+        tbs = ""
+        for i in range(tabs):
+            tbs += "\t"
+        click.echo("%s%s" % (tbs, statement))
+
+    if isinstance(info, dict):
+        if 'desc' not in info:
+            keys = info.keys()
+            keys.sort()
+            for k in keys:
+                prnt(k)
+                print_info(info[k], tabs+1)
+        else:
+            print_info("Description: %s " % info['desc'], tabs)
+            if 'default' in info:
+                print_info("Default value: %s" % str(info['default']), tabs)
+            else:
+                print_info("[ REQUIRED ]", tabs)
+    elif isinstance(info, (list, tuple)):
+        for v in info:
+            print_info(v, tabs + 1)
+    else:
+        prnt(info)
+
+
+@click.command()
+def instructions():
+    instructions = proj_conf.proj_instructions()
+    print_info(instructions)
+
+
 cli.add_command(clean)
 cli.add_command(config)
 cli.add_command(build)
+cli.add_command(instructions)
 
 cli()

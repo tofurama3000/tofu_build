@@ -1,1 +1,2 @@
 from project_config import make_proj_config as config_proj
+from project_config import proj_instructions as proj_instructions

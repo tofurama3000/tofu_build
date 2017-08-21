@@ -99,10 +99,10 @@ def __default_app():
             "desc": "Include directories to add"
         },
         "dyn_libs": {
-            "default": {},
+            "default": {"find": [], 'link':[]},
             "desc": "Dynamic libraries to link to"
         },
-        "stat_libs": {
+        "static_libs": {
             "default": [],
             "desc": "Static libraries to link to"
         },
@@ -120,11 +120,11 @@ def __default_test():
 def __default_project():
     return {
         "name": {
-            "description": "The name of the project " +
+            "desc": "The name of the project " +
                            "(should be unique to avoid container conflicts)"
         },
         "main": {
-            "descrption": "The name of the application to run in production "
+            "desc": "The name of the application to run in production "
         }
     }
 
@@ -238,3 +238,15 @@ def make_proj_config(yaml, options={}):
     else:
         bash_conf.make(yaml)
     cmake_conf.make(yaml)
+
+
+def proj_instructions():
+    return {
+        "type": {
+            "desc": "Type of the project (should be tofu_build)"
+        },
+        "project": __default_project().copy(),
+        "environment": __default_environment().copy(),
+        "apps": __default_app().copy(),
+        "tests": __default_test().copy()
+    }
