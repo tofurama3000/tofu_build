@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import yaml as YAML
+import yaml
 import proj_conf
 import os
 import click
@@ -7,30 +7,108 @@ import shutil
 import docker
 import subprocess
 import sys
+import re
 
 docker_client = docker.from_env()
 dir = os.getcwd()
+yaml_file = 'tofu_proj.yaml'
+
 
 def load_proj():
-    yaml = {}
-
-    if os.path.exists('proj.yaml'):
-        with open('proj.yaml') as proj_file:
-            yaml = YAML.load(proj_file)
-            if 'type' not in yaml or yaml['type'] != 'tofu_build':
-                raise Exception("Unknown project type!")
+    proj_conf = {}
+    if os.path.exists(yaml_file):
+        with open(yaml_file) as proj_file:
+            proj_conf = yaml.load(proj_file)
+            if 'type' not in proj_conf or proj_conf['type'] != 'tofu_build':
+                raise EnvironmentError("Unknown project type!")
     else:
-        raise Exception("Unable to find project!")
-    return yaml
+        raise EnvironmentError("Unable to find project!")
+    return proj_conf
 
 
-proj_settings = load_proj()
-dev_image = proj_settings['project']['name'] + "_dev"
-prod_image = proj_settings['project']['name'] + "_prod"
+try:
+    proj_settings = load_proj()
+    dev_image = proj_settings['project']['name'] + "_dev"
+    prod_image = proj_settings['project']['name'] + "_prod"
+except EnvironmentError:
+    if click.confirm("Project not initialized, initialize project now?"):
+        proj_conf = dict()
+        proj_info = dict()
+        proj_info['name'] = click.prompt("Enter project name").encode('utf-8')
+        proj_info['main'] = re.sub(
+            '[^0-9a-zA-Z]+',
+            '_',
+            proj_info['name'].lower()
+        )
+        proj_conf['project'] = proj_info
+        env_info = dict()
+        pckgs = click.prompt(
+            "Enter packages to install as comma-separated list"
+        ).encode('utf-8')
+        env_info['pckgs'] = [pckg.strip() for pckg in pckgs.split(',')]
+        proj_conf['environment']= env_info
+
+        app_info = {
+            'name': proj_info['main'],
+            'sources': [src.strip() for src in
+                        click.prompt('Enter source files as comma-separated list')
+                            .encode('utf-8')
+                            .split(',')
+                        ]
+        }
+
+        if click.confirm("Do you want to link dynamic libraries?"):
+            app_info['dyn_libs'] = {'find': [lib.strip() for lib in click.prompt(
+                    'Enter dynamic library CMake names as comma-separated list'
+                ).encode('utf-8').split(',')
+            ]}
+
+        if click.confirm("Do you want to enable pthreads?"):
+            app_info['other_flags'] = [].append('-pthread'.encode('utf-8'))
+
+        proj_conf['apps'] = [app_info]
+
+        num_tests = click.prompt(
+            "How many test programs do you have",
+            type=int
+        )
+
+        tests = []
+        for i in range(0, num_tests):
+            click.secho("Grabbing info for test %d" % (i + 1), fg='cyan')
+            test_info = {
+                'name': click.prompt("Enter test name").encode('utf-8'),
+                'sources': [src.strip() for src in
+                        click.prompt('Enter source files as comma-separated list')
+                            .encode('utf-8')
+                            .split(',')
+                            ]
+            }
+            if click.confirm("Do you want to link dynamic libraries?"):
+                test_info['dyn_libs'] = {
+                    'find': [lib.strip() for lib in click.prompt(
+                        'Enter dynamic library CMake names as comma-separated list'
+                    ).encode('utf-8').split(',')
+                ]}
+            if click.confirm("Do you want to enable pthreads?"):
+                test_info['other_flags'] = [].append('-pthread'.encode('utf-8'))
+            tests.append(test_info)
+
+        proj_conf['tests'] = tests
+
+        with open(yaml_file, "w") as proj_file:
+            click.secho("Saving config...", fg='green')
+            proj_file.write(yaml.dump(proj_conf))
+        click.secho("Done", fg='green')
+    else:
+        click.secho("Exiting...", fg='red')
+        exit(0)
+
 
 @click.group()
 def cli():
     pass
+
 
 def stop():
     try:
@@ -44,6 +122,7 @@ def stop():
         cont.stop()
     except:
         pass
+
 
 def del_containers():
     try:
@@ -59,6 +138,7 @@ def del_containers():
     except:
         pass
 
+
 def del_images():
     try:
         docker_client.images.remove(dev_image)
@@ -69,6 +149,7 @@ def del_images():
         docker_client.images.remove(prod_image)
     except:
         pass
+
 
 @click.command()
 def clean():
@@ -96,11 +177,13 @@ def clean():
 
     print "Clean done."
 
+
 def make_config(legacy):
     options = {}
     if legacy:
         options['legacy'] = True
     proj_conf.config_proj(proj_settings, options)
+
 
 @click.command()
 @click.option('--legacy', is_flag=True)
@@ -123,28 +206,28 @@ def run_env(env, pipe):
     if pipe:
         file = sys.stdout
 
-    print "Preparing docker image [%s]" % name
+    click.secho("Preparing docker image [%s]" % name, fg='yellow')
     if subprocess.Popen(
             ["docker", "build", "-f", docker_file, "-t", img, "."],
             stdin=file,
             stdout=file,
             stderr=file,
     ).wait() != 0:
-        print "Build failed!"
+        click.secho("Build failed!", fg='red')
         sys.exit(1)
-    print "Image ready"
+    click.echo("Image ready")
 
-    print "Running docker image [%s]" % name
+    click.secho("Running docker image [%s]" % name, fg='yellow')
     if subprocess.Popen(
             docker_run,
             stdin=file,
             stdout=file,
             stderr=file,
     ).wait() != 0:
-        print "Build failed!"
+        click.secho("Build failed!", fg='red')
         sys.exit(1)
 
-    print "Build successful!"
+    click.secho("Build successful!", fg='green')
 
 
 @click.command()
@@ -153,10 +236,10 @@ def run_env(env, pipe):
 def build(production, verbose):
     print production
     print verbose
-    print "Initializing..."
+    click.echo("Initializing...")
     stop()
     del_containers()
-    print "Building new config..."
+    click.echo("Building new config...")
     make_config(False)
 
     if not os.path.exists("build"):
@@ -171,11 +254,11 @@ def build(production, verbose):
     if production:
         run_env("prod", pipe)
 
-    print
-    print "**************************"
-    print "Your build was succesful!"
-    print "**************************"
-    print
+    click.echo()
+    click.secho("***************************", fg='green')
+    click.secho(" Your build was succesful! ", fg='green')
+    click.secho("***************************", fg='green')
+    click.echo()
 
 
 cli.add_command(clean)
